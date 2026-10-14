@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ターゲット1200 スペルチェック（50問）</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #f4f6f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 15px;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+      width: 100%;
+      max-width: 480px;
+      padding: 24px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 1.25rem;
+      color: #2c3e50;
+      margin-bottom: 12px;
+    }
+    .progress {
+      font-size: 0.9rem;
+      color: #7f8c8d;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+    .japanese-word {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #1a252f;
+      min-height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 10px;
+      margin-bottom: 20px;
+      border: 2px solid #e9ecef;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 14px;
+      font-size: 1.3rem;
+      border: 2px solid #ced4da;
+      border-radius: 10px;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 15px;
+      text-transform: lowercase;
+    }
+    input[type="text"]:focus {
+      border-color: #3b82f6;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #ffffff;
+      background-color: #2563eb;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:active {
+      background-color: #1d4ed8;
+    }
+    .result-message {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      display: none;
+    }
+    .result-message.correct {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+    .result-message.incorrect {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+    .score-title {
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+      color: #1e293b;
+    }
+    .score-detail {
+      font-size: 2.2rem;
+      font-weight: bold;
+      color: #2563eb;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card" id="app">
+  <h1>ターゲット1200 スペルテスト</h1>
+  
+  <!-- スタート画面 -->
+  <div id="start-screen">
+    <p style="margin: 20px 0; color: #475569;">ランダムで50問出題されます。<br>日本語に対応する英単語のスペルを入力してください。</p>
+    <button onclick="startQuiz()">テストを開始する</button>
+  </div>
+
+  <!-- クイズ画面 -->
+  <div id="quiz-screen" style="display: none;">
+    <div class="progress" id="progress-text">第 1 / 50 問</div>
+    <div class="japanese-word" id="japanese-text">〜を変える</div>
+    
+    <form id="quiz-form" onsubmit="handleAnswer(event)">
+      <input type="text" id="answer-input" placeholder="スペルを入力 (例: change)" autocomplete="off" autocapitalize="off" spellcheck="false" required>
+      <button type="submit" id="submit-btn">判定する</button>
+    </form>
+
+    <div id="result-message" class="result-message"></div>
+    <button id="next-btn" style="display: none; margin-top: 15px; background-color: #10b981;" onclick="nextQuestion()">次の問題へ</button>
+  </div>
+
+  <!-- 結果画面 -->
+  <div id="result-screen" style="display: none;">
+    <div class="score-title">テスト終了！</div>
+    <div class="score-detail" id="score-text">0 / 50 点</div>
+    <button onclick="startQuiz()">もう一度挑戦する</button>
+  </div>
+</div>
+
+<script>
+  // ターゲット1200用 単語データ（必要に応じて追加・変更してください）
+  const wordList = [
+    { word: "change", meaning: "〜を変える" },
+    { word: "create", meaning: "〜を創り出す" },
+    { word: "expect", meaning: "〜を予想する" },
+    { word: "increase", meaning: "増える、〜を増やす" },
+    { word: "remain", meaning: "〜のままでいる" },
+    { word: "allow", meaning: "〜を許す" },
+    { word: "contain", meaning: "〜を含んでいる" },
+    { word: "improve", meaning: "〜を改善する" },
+    { word: "produce", meaning: "〜を生産する" },
+    { word: "provide", meaning: "〜を供給する" },
+    { word: "accept", meaning: "〜を受け入れる" },
+    { word: "explain", meaning: "〜を説明する" },
+    { word: "express", meaning: "〜を表現する" },
+    { word: "forget", meaning: "〜を忘れる" },
+    { word: "offer", meaning: "〜を提供する、申し出る" },
+    { word: "protect", meaning: "〜を保護する" },
+    { word: "remember", meaning: "〜を覚えている" },
+    { word: "suggest", meaning: "〜を提案する" },
+    { word: "destroy", meaning: "〜を破壊する" },
+    { word: "support", meaning: "〜を支援する" }
+    // 実際運用する際はここに単語データを追加・差し替えできます
+  ];
+
+  let currentQuestions = [];
+  let currentIndex = 0;
+  let score = 0;
+  const TOTAL_QUESTIONS = 50;
+
+  function startQuiz() {
+    // 単語リストをシャッフル
+    const shuffled = [...wordList].sort(() => Math.random() - 0.5);
+    
+    // 50問選択（単語数が50問未満の場合はある分だけ出題）
+    const count = Math.min(TOTAL_QUESTIONS, shuffled.length);
+    currentQuestions = shuffled.slice(0, count);
+    
+    currentIndex = 0;
+    score = 0;
+
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('result-screen').style.display = 'none';
+    document.getElementById('quiz-screen').style.display = 'block';
+
+    showQuestion();
+  }
+
+  function showQuestion() {
+    const q = currentQuestions[currentIndex];
+    document.getElementById('progress-text').innerText = `第 ${currentIndex + 1} / ${currentQuestions.length} 問`;
+    document.getElementById('japanese-text').innerText = q.meaning;
+    
+    const input = document.getElementById('answer-input');
+    input.value = '';
+    input.disabled = false;
+    input.focus();
+
+    document.getElementById('submit-btn').style.display = 'block';
+    document.getElementById('next-btn').style.display = 'none';
+    
+    const resultMsg = document.getElementById('result-message');
+    resultMsg.style.display = 'none';
+    resultMsg.className = 'result-message';
+  }
+
+  function handleAnswer(event) {
+    event.preventDefault();
+
+    const input = document.getElementById('answer-input');
+    const userAns = input.value.trim().toLowerCase();
+    const currentQ = currentQuestions[currentIndex];
+    const resultMsg = document.getElementById('result-message');
+
+    if (!userAns) return;
+
+    input.disabled = true;
+    document.getElementById('submit-btn').style.display = 'none';
+
+    if (userAns === currentQ.word.toLowerCase()) {
+      score++;
+      resultMsg.innerText = "〇 正解！";
+      resultMsg.classList.add('correct');
+    } else {
+      resultMsg.innerText = `× 不正解... 正解は「${currentQ.word}」`;
+      resultMsg.classList.add('incorrect');
+    }
+
+    resultMsg.style.display = 'block';
+    
+    const nextBtn = document.getElementById('next-btn');
+    if (currentIndex < currentQuestions.length - 1) {
+      nextBtn.innerText = "次の問題へ";
+    } else {
+      nextBtn.innerText = "結果を見る";
+    }
+    nextBtn.style.display = 'block';
+    nextBtn.focus();
+  }
+
+  function nextQuestion() {
+    currentIndex++;
+    if (currentIndex < currentQuestions.length) {
+      showQuestion();
+    } else {
+      showResult();
+    }
+  }
+
+  function showResult() {
+    document.getElementById('quiz-screen').style.display = 'none';
+    document.getElementById('result-screen').style.display = 'block';
+    document.getElementById('score-text').innerText = `${score} / ${currentQuestions.length} 点`;
+  }
+</script>
